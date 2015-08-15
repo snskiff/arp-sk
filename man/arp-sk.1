@@ -1,0 +1,187 @@
+.TH ARP-SK 1 "24 August 2002" "Cédric Blancher" "arp-sk \- A swiss knife tool for ARP"
+.SH NAME
+arp-sk \- A swiss knife tool for ARP
+
+.SH SYNOPSIS
+.B arp-sk
+.BR MODE
+.BR OPTIONS
+.TP
+where \fBMODE\fP is either one among BASIC or ADVANCED and \
+\fBOPTIONS\fP lets you control each address of the ARP message (at \
+link \fBand\fP logical layers - i.e. Ethernet and IP addresses), and \
+lots of other sending parameters (interface, frequency, amount, and so on).
+.PP
+.SH DESCIRPTION
+.B arp-sk
+is an ARP packet generator aimed to illustrate ARP protocol fails. It allows
+custom packets to be generated from link layer to ARP layer.
+.TP
+It supports currently only Ethernet and IP protocols but is designed \
+to also work with other addresses (in a far away future ;-) 
+.SH BASIC MODES
+.TP
+.B -w, --who-has
+Send an ARP Who-has.
+.TP
+.B -r, --reply
+Send a ARP Reply.
+.SH ADVANCED MODES
+.TP
+None are yet implemented but they should appear very soon. They should \
+be considered as combinations and shortcuts of what you can do by \
+sending several basic packets.
+.TP
+.B -o, --spoof
+For those used to Dug Song's arpspoof in dsniff (NOT YET IMPLEMENTED)
+.TP
+.B -p, --arping
+(bad) RARP emulation. (NOT YET IMPLEMENTED)
+.TP
+.B -m, --arpmim
+Man in the Middle. (NOT YET IMPLEMENTED)
+.SH LINK LAYER OPTIONS
+.TP
+These parameters let you control what will appear in the packet at \
+link layer (Ethernet addresses of the ARP message). These addresses \
+don't need to be the same as those specified in the ARP message \
+itself. The RFC 826 (ARP's one) does not specify that there \
+must be some consistency between ARP and Ethernet layer. That means \
+you can provide uncorrelated addresses between these 2 layers.
+.TP
+This is very useful if \
+you want reach all hosts on the network (use broadcast address as \
+destination) or a particular host (the gateway for instance), or you \
+can hide the source of the ARP message by providing a fake source \
+address.
+.TP
+Here, you can provide either a hostname, an IP address or a \
+MAC address. If you use a hostname or an IP address and that Ethernet \
+address is not present in your ARP cache, a malformed DNS packet \
+is sent to the target. But since the cache does not contain the \
+Ethernet address, an ARP query is firstly sent on the network. The \
+target answers with an ARP and you got the Ethernet address.
+.TP
+.B -d, --dst HOST
+Set link layer destination.
+.BR HOST
+can be a hostname, an IP address or a
+MAC address.
+.TP
+.B -s, --src HOST
+Set link layer source.
+.BR HOST
+can be a hostname, an IP address or a MAC
+address.
+.TP
+.B --rand-hwa
+Set random addresses in link header
+.TP
+.B --rand-hwa-dst
+Set random destination in link header.
+.TP
+.B --rand-hwa-src
+Set random source in link header.
+.SH LOGICAL LAYER OPTIONS
+.TP
+These parameters let you control what will appear in the ARP message \
+itself, that is mainly the pairs <IP:MAC> for both source and \
+destination hosts.
+.TP
+You can specify either both IP and MAC (1.1.1.1:11:11:11:11:11:11), \
+only IP (1.1.1.1, information provided is the link layer will be used \
+to complete the ARP message), or only MAC (:11:11:11:11:11:11, then IP \
+is set to broadcast).
+.TP
+.B -D, --arp-dst HOST[:MAC]
+Set logical layer destination.
+.BR HOST
+can be a hostname or an IP address. A MAC address can be specified with
+.BR MAC.
+If not,
+.BR HOST
+will be resolved.
+.TP
+.B -S, --arp-src HOST[:MAC]
+Set logical layer source.
+.BR HOST
+can be a hostname or an IP address. A MAC address can be specified with
+.BR MAC.
+If not,
+.BR HOST
+will be resolved.
+.TP
+.B --rand-arp
+Set random addresses in ARP message.
+.TP
+.B --rand-arp-dst
+Set random destination adsresses in ARP message.
+.TP
+.B --rand-arp-src
+Set random source addresses in ARP message.
+.TP
+.B --rand-arp-hwa-dst
+Set random destination MAC address in ARP message.
+.TP
+.B --rand-arp-log-dst
+set random dst IP address in ARP message.
+.TP
+.B --rand-arp-hwa-src
+Set random source MAC address in ARP message.
+.TP
+.B --rand-arp-log-src
+Set random source IP address in ARP message.
+.SH MISCELLANEOUS OPTIONS
+.TP
+.B -i, --interface IFACE
+Use
+.BR IFACE
+as output interface (default: eth0).
+.TP
+.B -c, --count NUM
+Send
+.BR NUM
+packets
+.TP
+.B -T, --time NUM
+Wait the
+.BR NUM
+seconds between sending each packet (
+.BR NUM
+can be prefixed with u for microseconds)
+.TP
+.B --rand-time NUM
+Randomize the sending period of the packets by adding a random salt choosen
+between
+.BR -NUM
+and
+.BR NUM.
+.TP
+.B --beep
+Beep for each packet sent.
+.TP
+.B --use-ts
+Send an icmp-timestamp to resolve MAC to IP.
+.TP
+.B -n, --network ADDRESS
+Use
+.BR ADDRESS
+as broadcast address for sending icmp-timestamp.
+.TP
+.B -N, --call-dns
+Force address name resolution. This should never be used since it
+sends DNS messages on the LAN and slows down performances of arp-sl.
+.TP
+.B -V, --version
+Print version and exit.
+.TP
+.B -h, --help
+.SH BUGS
+No known bugs. Please contact
+.BR AUTHORS
+if you found one.
+.SH AUTHORS
+.B arp-sk
+is written by Frédéric Raynal <pappy@security-labs.org>. This man page was
+written by Cédric Blancher <blancher@cartel-securite.fr>. They are both
+licenced under the terms of the GNU GPL.

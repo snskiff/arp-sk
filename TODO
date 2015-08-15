@@ -1,0 +1,53 @@
+		TODO LIST
+
+These are things to fix/improve, from the most to the least urgent:
+
+- options (CB)  : 
+
+    [CB]
+    En parlant de fonctionnalites, j'avais pense a une option --spoof (par
+    exemple) qui donnerait un usage similaire a celui de arpspoof :
+
+       arp-sk --spoof <target> <spoofed_host>
+
+   Cela conduirait a d'abord envoyer une requete, puis lancer des reponses
+   a intervale regulier. En specifiant -r ou -w on pourrait n'envoyer que
+   des requetes ou que des reponses.
+
+   [FR]
+   arpspoof n'envoie pas de requête préalable, mais que des réponses.
+   J'avais effectivement pensé à mettre des "racourcis" comme celui-ci,
+   mais le problème, c'est qu'il faut envoyer des paquets différents
+   (quoique ... pour ça, ça doit fonctionner car il suffit de créer un
+   seul "pblock" - structure de données de libnet -  pour arp et le
+   modifier).
+
+
+- Change get_ip_from_ether() :
+    - replace the sleep() that waits for the answer to the icmp
+      timestamp
+    - find another trick to retrieve IP address : windows boxes don't
+      answer to broadcast :-(
+
+- Change get_ether_from_ip() :
+    - same comments as in get_ip_from_ether()
+    - when a ether is not in the arp cache, I force it to appear by
+      sending a fake DNS query. This trick is taken from dsniff...  
+      but it should probably be replaced.
+
+- port/test to other unix
+  -> done to BSD
+
+
+- rand parts in packets : 
+  At arp layer, random addresses are set AFTER anything else occurs
+  (addr. resolution, ...): merge that.
+
+- option handling :
+  replace the #define with an enum...
+
+- allow multiple destinations
+
+- interface ? 
+
+- Allow ARP manipulation with other addresses than Ethernet.

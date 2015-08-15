@@ -1,0 +1,308 @@
+                        --[  ChangeLog  ]--
+
+              Frederic Raynal <pappy@security-labs.org>
+
+
+
+Patch or bug fix' authors are specified within [XX], where XX are initials
+of first name and last name of the author (see CONTRIB files). Those
+without any [XX] are mine.
+
+
+
+Sun Dec  5 15:55:19 CET 2004                               0.0.16
+
+  [Changes for users]
+    - remove the -a (address space) options (was useless)
+    - the -t (timing) is now -T (-t will be used for futur compatibility
+      with arpspoof)
+    - configure: lots of improvements
+        + unneeded installs are removed
+        + removed --with-arpcache=FILE (will make it system dependent)
+        + "make distcheck" is supported
+        + test the version of libnet, ...
+
+Fri Oct 11 00:44:29 CEST 2002                               0.0.15
+
+  [General]
+    - name of the device is stored in a global (sk_ifname), defined in
+      sendpacket.c
+	
+  [lookup-eth-ip.c]
+    - resolve_ip_from_eth(): BUG FIX
+	use a specific libnet_t* link to send the icmp message. Using the
+	same as the one for arp caused malformed messages to be sent.
+    - add native support for BSD lookup of MAC/IP addresses
+    - lookup_in_arp_cache(): BUG FIX [LL]
+        when the cache contains
+          10.0.0.11 ...
+          10.0.0.1  ... 
+      and that you look for 10.0.0.1, it retrieves 10.0.0.11
+
+
+
+Sun Sep 15 15:46:00 CEST 2002                               0.0.14
+
+  [sk.c]
+    - use va_list in fatal() and warning()
+        
+  [General]
+    - move src/*.h to include/
+    - remove the handler structure to use directly pointers to functions
+    - changed my coding convetions making sources hopefully more readable
+    - all structures are now called arpsk_*_t
+    - add ARP file [CB]
+    - add --with-arpcache=FILE in configure.in
+
+
+Tue Aug 27 11:12:36 CEST 2002                               0.0.13
+
+  [arp-common.c/eth-common.c]
+  - Fix a bug that could lead to failure when lots of packets where sent
+    using the random hook: the libnet_build_*() functions were using 0 as
+    last argument instead of the ptag to rebuild 
+        => a new pblock was created each time
+        => more and mode pblock where added
+        => packet became bigger and bigger until it exceeded the max
+           allowed size
+        => libnet_write()->libnet_write_link()->sendto() failed
+        
+  [arp-sk]
+  - add -N: force name resolution during display
+
+  [General]
+  - remove everything that was related to packet pool
+  - complete the man page and add a Makefile to it
+  - replace _SIGNAL_SENDING_ by HAVE_SIGSEND
+  - add HAVE_SIGSEND by default in the configure.in.
+  - change default install directory from /usr/local/bin to
+    /usr/local/sbin
+        
+        
+  [sendpacket.c]
+  - former sendpackets.c, now, it just send ONE packet to the wire
+  - made cleanup in libnet writing functions: simply rests on
+    libnet_write() that does all the job
+  - add an option to force address resolution (default is now no name
+    resolution unless -N is used)
+  - add calls to pause() when signals are used for sending, this make the
+    program is no more CPU consuming
+  - fix a memory leak when leaving arp-sk with cleanup() (forgot to free
+    sk_pkt) 
+       
+Tue Aug  6 16:21:25 CEST 2002                               0.0.12
+
+  [General]
+  - add configure (my first so feel free to improve it ;-)
+  - add a libcompat
+  - compile and run under FreeBSD 4.4
+        
+  [ip-common.c]
+  ip_is_reserved(): change the generation of random IP addresses since
+    Fyodor provides a new one in nmap-3.0
+
+
+  [lookup-eth-ip.c]
+  lookup_in_arp_cache(): the former way of checking incomplete addresses
+    was buggy. Now, I look at the flag of the entry on the cache (0x0 means
+    incomplete). 
+
+Wed Jul 17 12:01:23 CEST 2002                               0.0.11b
+
+  [eth-common.c]
+  - change a structure in get_if_eth_addr(), conforming to the new return
+    type of libnet_get_hwaddr() that came with libnet-1.1.0-beta7b
+
+  [Makefile]
+  - clean up and add the creation of the directory $(DO)/Objects
+
+  [README]
+  - add information in README about address resolution and options
+    manipulation 
+
+  [INSTALL]
+  - create INSTALL file
+
+
+Sun Jun 30 15:44:51 CEST 2002                               0.0.11
+
+  [arp-sk]
+  - add support for --rand* (support while arguments are handled need to
+    be improved) 
+  - change the sending hook at the end of the main():
+      do_classical_hook() vs. do_random_hook()
+
+        
+Tue May 28 17:56:28 CEST 2002                               0.0.10
+
+  [libsk / arp-sk]
+  - arp-sk.c: add option --rand-time to randomize the period between the
+    sending of 2 packets
+  - send-packets.c: 
+      - add support for a random period of sending
+      - add timestamp to the display
+
+  [libsk]
+  - add 2 new functions in sk_arp_pkt_handler (get_rand_hwa() and
+    get_rand_ip()), to allow the use of the "rand" flags.
+        
+  [arp-sk]
+  - control that only one -d (resp. -D, -s, -S) is used only once.
+  - who-has packet dst MAC is set to 00:00:00:00:00:00 if nothing is
+    specified with -D
+
+Tue May 21 09:00:06 CEST 2002                               0.0.9
+
+  [arp-sk]
+  Very nive help output now
+
+  [libsk / arp-sk]
+  - Change str2ethip() to support :MAC only input.
+  - Add show_version()
+
+  [libsk]
+  send-packets.c: segfault occurs when packets have to be send very
+  quickly and that ctrl+c is entered. It is cause in cleanup() because:
+    - it calls print_stats() which calls libnet_name2addr() (and not
+      libnet_name2addr_r() which is buggy)
+    - it attempts to write to stdout, which mess up completely with the
+      writings done in send_packets().
+  It can be any of the 2 reasons ... or another one, I can't say :-(
+  This is currently fixed by blocking some signals in cleanup before
+  exiting. 
+        
+Fri May 17 13:49:32 CEST 2002                               0.0.8
+        
+  [arp-sk]
+  -s and -d both accept IP or MAC addresses.
+  If you provide an IP address, and nothing for the ARP message, this
+  information is also used in the ARP message.
+
+        
+Thu May 16 18:05:47 CEST 2002                               0.0.7
+
+  [icmp-sk]
+  Stop considering that for the moment ...
+
+  [libsk / arp-sk]
+  Yeah :-) arp-sk is now independant of the adresses space
+  I add lots of pointers on function (looks like methods) the structure
+  sk_arp_pkt_handler (sk.h) and all data are manipulated through them. If
+  the code is a bit dense, it is "portable" (from a protocol point of
+  view). Nevertheless, I'm not sure all methods respects the same logic,
+  and that should be something to fix.
+        
+
+Sun May  5 23:46:52 CEST 2002                               0.0.6
+
+  [libsk / arp-sk]
+  Try to make arp-sk independant from the hardware and logical
+  addresses => 
+    - see sk.h to see the modifications in the structure
+    - arp-common.c and eth-common.c will gather functions specific to
+      these protocols
+    - add functions to arp_pkt_handler
+  but there is still lot of work to do to achieve that ;-/
+        
+  [libsk]
+  Add a sk_init() function that have to initialize protocol specific
+  variables and call another initializer for the requested protocol.
+
+  [arp-sk]
+  Change the structure arp_eth_ip_addr, which now contains 2
+  structures 'ipeth', itself composed of a source and a destination
+  (<IP>:<ETH>).
+  This is supposed to be more convenient for the upcoming changes
+  (multiple destinations).
+
+
+Sun May  5 16:39:44 CEST 2002                                0.0.5
+
+  [libsk / arp-sk]
+  Add the compilation flag _SIGNAL_SENDING_ that let you chose your
+  way to send packets: either by playing with signals or in the main().
+
+  [libsk / arp-sk]
+  Add a new handle for the -t flag (inspired by hping again ;-)
+  It allows so specify a quicker delay for the sending.
+
+
+Sat May  4 12:43:36 CEST 2002                                0.0.4
+
+  [libsk / arp-sk]
+  In send_packets.c, add a function to display statistics.
+  It rests on pointers on functions that are defined in sk.h:
+
+     /* sk.h */
+     int (*snprintf_pkt)(char *, void *, u_int);
+     int (*snprintf_name_dst)(char *, void *, u_int);
+     int (*snprintf_mac_dst)(char *, void *, u_int);
+     int (*snprintf_name_src)(char *, void *, u_int);
+     int (*snprintf_mac_src)(char *, void *, u_int);
+
+  These functions have to be define for each supported hardware and
+  logical addresses.
+
+  Add the requested functions mentioned above for arp-sk (see
+  arp-eth-ip.c) 
+
+
+Fri May  3 10:57:21 CEST 2002                                0.0.3
+
+  [arp-sk]
+  Code cleanup at the end (to solve the casting troubles I had
+  yesterday...)
+
+  [arp-sk]
+  Prepare the support for other link layer protocols than Ethernet. 
+  For each of these protocols, one have to define the needed functions
+  to create an handler for all possible ARP packets:
+
+    /* in arp-sk.h */
+    typedef struct {
+      void (*set_hwaddr)(arp_header *, u_char *, u_char *);
+      void (*set_arp_msg)(arp_header *, u_char *, u_char *, u_long, u_long);
+      libnet_ptag_t (*arp_builder)(arp_header *, libnet_t *link, 
+                                   libnet_ptag_t tag);
+    } arp_pkt_handler;
+
+  This have been done in arp-eth-ip.c ... but work remains to be done
+  in the main() (arp-sk.c).
+
+  
+
+
+
+Fri May  3 08:21:21 CEST 2002                                0.0.2
+
+  [libsk]
+  Add a hook for the sending of the packets (in send_packets.c): 
+  I use SIGALRM to send every packet present in packets_pool. 
+
+  [libsk]
+  Add a packets_pool that contains every built packets (i.e. u_char *)
+  that have to be sent.
+
+  [arp-sk / libsk]
+  Put lots of variable in global, declare some in the libsk file where
+  they are used and "extern" them in sk.h
+
+
+
+
+Thu May  2 16:21:01 CEST 2002                                0.0.1
+   
+  [arp-sk]
+  Options seem valid (wait for Cedric and Eric comments).
+  Send only one packet to check if it is correctly build according to
+  the default behavior of arp-sk and the provided arguments.
+
+  [icmp-sk]
+  Troubles with libnet_build_icmpv4_redirect(): the checksum of the
+  icmp layer is not good (Mike D. Schiffman <mike@infonexus.com>
+  contacted, and answered ... but had no time to test his solution).
+
+  [libsk]
+  Will contain all common files (failure(), packets sender,...).
+  By now, the 2 programs 
+        

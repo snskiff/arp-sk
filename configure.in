@@ -1,0 +1,314 @@
+# Process this file with autoconf to produce a configure script.
+
+AC_INIT(src/arp-sk.c)
+
+PWDD=`pwd`
+
+ARPSK_VERSION=`cat $PWDD/VERSION`
+ARPSK_DATE=`date`
+AC_SUBST(ARPSK_VERSION)
+AC_SUBST(ARPSK_DATE)
+
+
+AC_MSG_RESULT(beginning autoconfiguration process for arp-sk-${ARPSK_VERSION}...)
+
+AC_CANONICAL_SYSTEM
+AC_PREFIX_DEFAULT("/usr/local")
+AC_LANG_C
+
+AM_INIT_AUTOMAKE(arp-sk, $ARPSK_VERSION)
+
+dnl 
+dnl Templates
+dnl 
+
+
+
+dnl 
+dnl  Checks for programs.
+dnl 
+AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_RANLIB
+AM_SANITY_CHECK
+
+dnl 
+dnl  Checks for libraries.
+dnl 
+
+dnl  Home made compat librairy
+COMPATINC="-I$PWDD/compat"
+COMPATLIB="-L$PWDD/compat -lcompat"
+AC_SUBST(COMPATINC)
+AC_SUBST(COMPATLIB)
+
+
+# Allow user to specify flags
+# copy/paste from OpenSSH's configure.ac
+AC_ARG_WITH(cflags,
+	[  --with-cflags           Specify additional flags to pass to compiler],
+	[
+		if test "x$withval" != "xno" ; then
+			CFLAGS="$CFLAGS $withval"
+		fi
+	]	
+)
+AC_ARG_WITH(cppflags,
+	[  --with-cppflags         Specify additional flags to pass to preprocessor] ,
+	[
+		if test "x$withval" != "xno"; then
+			CPPFLAGS="$CPPFLAGS $withval"
+		fi
+	]
+)
+AC_ARG_WITH(ldflags,
+	[  --with-ldflags          Specify additional flags to pass to linker],
+	[
+		if test "x$withval" != "xno" ; then
+			LDFLAGS="$LDFLAGS $withval"
+		fi
+	]	
+)
+
+
+dnl AC_CHECK_LIB([sk], [send_packets])
+AC_MSG_CHECKING(for libnet)
+AC_ARG_WITH(libnet,
+[  --with-libnet=DIR      use libnet build directory],
+[ case "$withval" in
+  yes|no)
+     AC_MSG_RESULT(no)
+     ;;
+  *)
+     if test -f $withval/include/libnet.h -a -f $withval/lib/libnet.a; then
+        owd=$PWDD;
+        if cd $withval; then 
+	   withval=`pwd`; cd $owd; 
+	else
+	  AC_ERROR($withval does not exist)
+	fi
+        NETINC="$withval/include"
+        NETLIB="-L$withval/lib -lnet"
+        AC_MSG_RESULT($withval)
+     else
+        AC_ERROR(libnet.h or libnet.a not found in $withval)
+     fi
+     ;;
+  esac ],
+[ if test -f ${prefix}/include/libnet.h; then
+     NETINC="${prefix}/include"
+     NETLIB="-L${prefix}/lib -lnet"
+  elif test -f /usr/include/libnet/libnet.h; then
+     NETINC="/usr/include/libnet"
+     NETLIB="-lnet"
+  elif  test -f /usr/local/include/libnet.h; then
+     NETINC="/usr/local/include"
+     NETLIB="-L/usr/local/lib -lnet"
+  elif test -f /usr/include/libnet.h; then
+     NETINC="/usr/include"
+     NETLIB="-lnet"
+  else
+     AC_MSG_RESULT(no)
+     AC_ERROR(libnet not found)
+  fi
+  AC_MSG_RESULT(yes) ]
+)
+
+dnl Now let's checck the version of libnet (1.1.x requirerd)
+AC_MSG_CHECKING(for version 1.1.x of libnet)
+AC_TRY_RUN([
+#include "$NETINC/libnet.h"
+#include <string.h>
+int main()
+{
+   return (strncmp(LIBNET_VERSION, "1.1.", 4));
+}
+],
+[ AC_MSG_RESULT(yes)],
+[  AC_MSG_RESULT(no)
+   AC_MSG_ERROR(Bad libnet version found in $NETINC/libnet.h:
+download libnet-1.1.x from http://www.packetfactory.net/projects/libnet/. 
+If you think this version of libnet is already installed on your system
+tell arp-sk where it is using --with-libnet=DIR)
+]
+dnl ,
+dnl [  v=(`sed -n /LIBNET_VERSION/p /usr/local/include/libnet.h  | sed s/\"//g |awk '{print $3}'`)
+dnl   echo "v=$v"
+dnl   save_IFS="${IFS}"
+dnl   IFS=.
+dnl   vatb=(${v[0]})
+dnl   IFS=$save_IFS
+dnl   LIBNET_MAJOR=${vtab[0]}
+dnl   LIBNET_MINOR=${vtab[1]}
+
+dnl   if [ $LIBNET_MAJOR==1 -a $LIBNET_MINOR==1 ]; then 
+dnl     AC_MSG_RESULT(yes);
+dnl   else
+dnl    AC_MSG_RESULT(no)
+dnl    AC_MSG_ERROR(Bad libnet version:
+
+dnl $NETINC/libnet.h
+
+dnl download libnet-1.1.x from http://www.packetfactory.net/projects/libnet/. 
+dnl If you think this version of libnet id already installed on your system, 
+dnl tell arp-sk where it is using --with-libnet=DIR)
+dnl   fi
+dnl ]
+)
+
+
+NETINC="-I$NETINC"
+AC_SUBST(NETINC)
+AC_SUBST(NETLIB)
+
+
+
+dnl  Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS([netinet/in.h string.h sys/socket.h sys/time.h unistd.h net/ethernet.h])
+
+
+dnl 
+dnl  Checks for typedefs, structures, and compiler characteristics.
+dnl 
+AC_C_CONST
+AC_HEADER_TIME
+AC_STRUCT_TM
+
+AC_PROG_GCC_TRADITIONAL
+if test "$GCC" = yes ; then
+	CFLAGS="$CFLAGS -W -Wall"
+fi
+
+
+dnl 
+dnl  Checks for library functions.
+dnl
+AC_TYPE_SIGNAL
+AC_FUNC_VPRINTF
+AC_CHECK_FUNCS([getopt getopt_long inet_aton inet_ntop strcasecmp strerror strlcat strlcpy strlcpy strlcat])
+
+dnl
+dnl Use signal to send packets or no
+dnl
+AC_MSG_CHECKING(whether to compile in timing/sending based on signals)
+AC_ARG_WITH(sigsend,
+[  --with-sigsend: compile in timing/sending based on signal SIGALARM.],
+[ case "$withval" in
+	no)
+		AC_MSG_RESULT(no)
+		SIGSEND="no"
+		AC_DEFINE(HAVE_SIGSEND, 0,
+		  [Define to use signals to send the packets])
+		;;
+	yes)
+		AC_MSG_RESULT(yes)
+		SIGSEND="yes"
+		AC_DEFINE(HAVE_SIGSEND, 1,
+		  [Define to use signals to send the packets])
+		;;
+	*)
+		AC_MSG_RESULT(yes)
+		SIGSEND="yes"
+		AC_DEFINE(HAVE_SIGSEND, 1,
+		  [Define to use signals to send the packets])
+		;;
+esac ], 
+[ AC_MSG_RESULT(yes)
+  SIGSEND="yes"
+  AC_DEFINE(HAVE_SIGSEND, 1,
+		  [Define to use signals to send the packets])
+] )
+
+dnl
+dnl do you have arp cache ?
+dnl
+AC_ARG_WITH(arpcache,
+[  --with-arpcache: set the file to use as ARP cache.],
+[ AC_DEFINE_UNQUOTED(ARP_CACHE_FILE, "${withval}",
+  [Define if /proc/net/arp exists on the system])
+  AC_DEFINE(HAVE_PSEUDO_PROCFS, 1,
+  [if your system does not support /proc fs, this is used to test 
+   wether ARP_CACHE_FILE will be set at its default value or no]) 
+],
+[ AC_DEFINE(ARP_CACHE_FILE, "/proc/net/arp",
+  [Define if /proc/net/arp exists on the system])
+  AC_DEFINE(HAVE_PSEUDO_PROCFS, 0,
+  [if your system does not support /proc fs, this is used to test 
+   wether ARP_CACHE_FILE will be set at its default value or no]) 
+] 
+)
+
+dnl 
+dnl Just in case you are running arp-sk on BSD.
+dnl
+dnl OLD_BSD_WARNING="
+dnl 	On some old BSD systems you can't spoof addresses at link level
+dnl 	unless you either patch your kernel or use a special LKM. 
+dnl 	Have a look at in LIBNET-SRC/support/bpf-lkm to fix that and enjoy.
+
+dnl "
+
+dnl case "$target_os" in
+
+dnl *linux*)
+dnl dnl	DYNLIB="-ldl"
+dnl 	;;
+
+dnl *freebsd*)
+dnl dnl	DYNLIB="-lc"
+dnl dnl	AC_MSG_RESULT($OLD_BSD_WARNING)
+dnl 	;;
+
+dnl *netbsd*)
+dnl dnl	DYNLIB="-lc"
+dnl dnl	AC_MSG_RESULT($OLD_BSD_WARNING)
+dnl 	;;
+
+dnl *)
+dnl     AC_MSG_WARN(Apparently your OS is not officially supported yet.)
+dnl     AC_MSG_WARN(apr-sk may not work.)
+dnl     AC_MSG_RESULT(Please send diffs to pappy@security-labs.org)
+dnl     ;;
+dnl esac
+
+
+dnl
+dnl Save all these informations
+dnl
+AM_CONFIG_HEADER(include/config.h)
+
+AC_OUTPUT(Makefile man/Makefile compat/Makefile src/Makefile include/version.h include/Makefile)
+
+
+
+
+# Someone please show me a better way :)
+# copy/paste from OpenSSH's configure.ac and changes by myself
+A=`eval echo ${prefix}` ; A=`eval echo ${A}`
+C=`eval echo ${sbindir}` ; C=`eval echo ${C}`
+F=`eval echo ${mandir}/man1` ; F=`eval echo ${F}`
+
+echo ""
+echo "arp-sk-${ARPSK_VERSION} has been configured with the following options:"
+echo ""
+
+echo "   System binaries: $C"
+echo "      Manual pages: $F"
+
+echo ""
+
+echo "              Host: ${host}"
+echo "          Compiler: ${CC}"
+echo "    Compiler flags: ${CFLAGS}"
+echo "Preprocessor flags: ${CPPFLAGS}"
+echo "      Linker flags: ${LDFLAGS}"
+echo ""
+
+echo "            libnet: ${NETLIB}"
+echo "           sigsend: ${SIGSEND}"
+
+echo ""
+
+
+AC_MSG_RESULT($SKMOD_MSG)

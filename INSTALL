@@ -1,0 +1,85 @@
+	           --[  Quick Install Guide  ]--
+
+	      Frederic Raynal <pappy@security-labs.org>
+
+
+WARNING:
+
+Since arp-sk-0.13, the default install path is set to /usr/local/sbin,
+rather than /usr/local/bin. So, if you installed a previous version,
+be sure to remove the former binary from /usr/local/bin.
+
+
+
+
+--[  1. Get libnet-1.1  ]--
+
+arp-sk rests on libnet-1.1.
+
+http://www.packetfactory.net/projects/libnet/
+
+See Libnet files to install it.
+
+
+--[  2. Configure  ]--
+
+Note that this is my very first configure script, so be cool ;) For
+instance, I intend to add a test to check your libnet version, but it
+fails under BSD.
+
+Available arguments are:
+
+  --with-libnet=DIR
+    use if you need to specify is the location of libnet-1.1
+
+  --with-sigsend (default is yes)
+    by default, the timing and sending mechanisms rests upon the
+    alarm(2) function, i.e. it sends SIGALARM and a special callback
+    function performs the sending and re-initializes the timer.
+    With this option, you can disable this by simply running: 
+        ./configure --without-sigsend
+
+  --with-arpcache=FILE  [default: /proc/net/arp]
+    Set the file that is going to be used as ARP cache for some
+    addresses lookup. 
+
+    If your system has a /proc/net/arp file, there is no need to set
+    this option. On most Linux distributions, this file exists so you
+    won't have to change anything. 
+
+    On BSD system, I handle arp cache directly through sysctl(), so
+    this option should be useless.
+
+    With other systems, this flag may be a way to feed arp-sk with the
+    expected values for IP/MAC addresses. If you use this flag, it
+    will overwrite the default behavior of your system. For instance,
+    on BSD, you won't use sysctl() anymore.
+
+
+    The provided MUST have the following structure:
+
+    IP address      HW type  Flags   HW address          Mask  Device
+    192.168.24.61   0x1      0x6     08:00:2B:87:24:0A   *     eth0
+    192.168.1.100   0x1      0x6     00:10:FF:6E:38:A0   *     eth0
+    192.168.1.23    0x1      0x6     08:00:20:C1:12:A4   *     eth0
+    192.168.18.7    0x1      0x2     08:00:69:12:48:05   *     eth0
+    192.168.24.103  0x1      0x2     00:D0:B7:C9:74:13   *     eth0
+
+    HW type : 0x1 is Ethernet
+    Flags : must be any "valid" value, ie such that (<val> & 0x02) != 0
+    (See net/if_arp.h)
+
+
+--[  3. Compile  ]--
+
+Run 'make' (or gmake) and it should be fine. 
+
+The binary arp-sk is in the directory src/.
+
+If there are errors or warnings, please drop me a mail.
+
+Note:
+You may see this warning (and similar ones):
+strcasecmp.c:3: warning: ISO C forbids an empty source file
+
+If you know howto avoid it, let me know.

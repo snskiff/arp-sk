@@ -1,0 +1,163 @@
+	        --[  arp-sk Options manipulation  ]--
+
+	      Frederic Raynal <pappy@security-labs.org>
+
+
+
+-- --[  Modes  ]-- --
+
+There are 2 basics mode:
+  - who-has: build a request ARP message. 
+  - reply: build a reply ARP message (default)
+
+Other advanced modes should come very soon
+  - arping: send a who-has to every host on the LAN to see who is here
+  - promisc: detection of boxes that are sniffing on the network using
+             promiscuous mode of their network interface
+  - arpmim: perform Man in the Middle attack
+
+
+-- --[ Link level options  ]-- --
+
+-s: set the source address of the packet. 
+    Default : MAC address of the interface used to send the packets.
+
+-d: set the destination address of the packet
+    Default: broadcast
+
+These 2 options have a strong influence on the ARP message itself.
+Here are the default according to these options:
+
+  - request
+
+      # ./arp-sk -i eth1 -w
+      + Running mode "who-has"
+      + IfName: eth1
+      + Source MAC: 52:54:05:f4:62:30
+      + Source ARP MAC: 52:54:05:f4:62:30
+      + Source ARP IP : 192.168.1.1 (batman)
+      + Target MAC: ff:ff:ff:ff:ff:ff
+      + Target ARP MAC: 00:00:00:00:00:00
+      + Target ARP IP : 255.255.255.255 (255.255.255.255)
+
+
+  - reply
+
+      # ./arp-sk -i eth1 -r
+      + Running mode "reply"
+      + IfName: eth1
+      + Source MAC: 52:54:05:f4:62:30
+      + Source ARP MAC: 52:54:05:f4:62:30
+      + Source ARP IP : 192.168.1.1 (batman)
+      + Target MAC: ff:ff:ff:ff:ff:ff
+      + Target ARP MAC: ff:ff:ff:ff:ff:ff
+      + Target ARP IP : 255.255.255.255 (255.255.255.255)
+
+  The only difference comes from the destiantion mac address from ARP
+message, since it has to be 00:00:00:00:00:00. For the reply mode,
+consistency is preserved and the destination MAC address used for the
+link layer is copied in the ARP message.
+
+
+-- --[  ARP message  ]-- --
+
+  This default comportment is almost dumb, especially if you look at
+the destination part of the ARP message. Hence, it is necessary to
+provide destination addresses to avoid that. You can play with -D
+which accepts several inputs -D <hostname|hostip>[:MAC]
+
+If you use at the same time -d and -D, everything you specify is put
+exactly where it should :
+  -d in the link layer
+  -D in the ARP message
+If you don't provide a MAC address with the -D, the one from the link
+layer is used.
+
+
+The logic is almost the same for the source parts of the ARP message.
+If you intend to spoof addresses, you will need to play with the
+argument  -S <hostname|hostip>[:MAC] 
+
+Note that several writings are legal :
+
+  - just set the IP address -> -S 1.1.1.1
+  - just set the MAC address -> -S :11:11:11:11:11:11
+    DO NOT FORGET THE ':' AT THE BEGINNING, otherwise, arp-sk will
+    consider there is a mistake here
+  - both IP and MAC -> -S 1.1.1.1:11:11:11:11:11:11
+
+
+Of course, you can perform the same tricks with the destination (-D)
+
+
+-- --[  A feature, not a bug ...  ]-- --
+
+If you provide a MAC address for -S or -D, but no IP one, the arping
+way is used to lookup the IP address. So for instance:
+
+    # ./arp-sk -c 1 -t 1 --beep -i eth1 -s 11:11:11:11:11:11 -D 1.2.3.4 --use-ts
+    option beep
+    - Warning: no mode given, using default.
+    + Running mode "reply"
+    + IfName: eth1
+    + Source MAC: 11:11:11:11:11:11
+ -> Wrote ICMP timestamp (54 bytes) to retrieve IP address ... 
+    - Warning: can't resolve from mac 11:11:11:11:11:11 => use local one.
+    + Source ARP MAC: 11:11:11:11:11:11
+    + Source ARP IP : 192.168.1.1 (batman)
+    + Target MAC: ff:ff:ff:ff:ff:ff
+    + Target ARP MAC: ff:ff:ff:ff:ff:ff
+    + Target ARP IP : 1.2.3.4 (1.2.3.4)
+
+    --- Start sending --
+    (1) To: ff:ff:ff:ff:ff:ff From: 11:11:11:11:11:11 0x0806
+        ARP For 1.2.3.4 (ff:ff:ff:ff:ff:ff):
+            192.168.1.1 is at 11:11:11:11:11:11
+
+    --- 1.2.3.4 (ff:ff:ff:ff:ff:ff) statistic ---
+    To: ff:ff:ff:ff:ff:ff From: 11:11:11:11:11:11 0x0806
+        ARP For 1.2.3.4 (ff:ff:ff:ff:ff:ff):
+            192.168.1.1 is at 11:11:11:11:11:11
+    1 packets tramitted (each: 96 bytes - total: 96 bytes)
+
+The -s flag is used to set the mac address at the link layer. Since no
+information is provided for the ARP message, arp-sk attempts to
+retrieve the IP address bound to 11:11:11:11:11:11. Thus, it sends an
+icmp-timestamp to a broadcast address and wait for an answer. 
+
+Since it does not receive any, it choses to use the local IP address,
+and arp-sk goes its way.
+
+The --use-ts option forces the sending of the icmp-timestamp
+message. The default behavior is NOT to send it and use the local IP
+address.
+
+-- --[  Address resolution  ]-- --
+
+There are 2 ways to lookup an address. 
+
+You have the IP and look for the MAC address:
+Then, you look in the ARP cache (/proc/net/arp with Linux, sysctl()
+for BSD). If you can't find the entry you are looking for, arp-sk
+sends a fake udp message (dns) to the target, that answers with an
+icmp-unreach ... then you have its MAC address in your ARP cache.
+
+You have the MAC and look for the IP address:
+Here, you broadcast a ping with MAC address filled with the target
+MAC, but IP address set to broadcast address. To answer, the atrget
+needs to send an arp who-has to you, so you have its address.
+
+But ...
+
+1. If the target already has you in its cache, the who-has is not
+   send, but you receive the icmp-reply anyway => you don't have the
+   IP address.
+
+2. not all systems do answer to broadcast icmp messages. For instance,
+   windows never answers by default, and Unix can be configured to
+   drop such messages.
+
+Capturing the received answer is a way to bypass the 1st point, but
+that would require to use libpcap, which is not (yet) in my plan ;-) 
+
+Anybody having a solution for the second point can drop me a mail.
